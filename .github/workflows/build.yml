@@ -1,0 +1,35 @@
+name: Build pirateproto2 Flipper App
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout app repo
+        uses: actions/checkout@v4
+
+      - name: Clone Flipper firmware
+        run: |
+          git clone --depth 1 https://github.com/flipperdevices/flipperzero-firmware.git
+
+      - name: Copy pirateproto2 app into firmware tree
+        run: |
+          mkdir -p flipperzero-firmware/applications_user/pirateproto2
+          rsync -av --exclude=flipperzero-firmware . flipperzero-firmware/applications_user/pirateproto2/
+
+      - name: Build pirateproto2 (.fap)
+        working-directory: flipperzero-firmware
+        run: |
+          ./fbt fap_pirateproto2
+
+      - name: Upload pirateproto2 .fap artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pirateproto2-fap
+          path: |
+            flipperzero-firmware/dist/**/pirateproto2.fap

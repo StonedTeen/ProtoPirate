@@ -69,7 +69,7 @@ jobs:
         cp $(find . -name "pirateproto2.fap" -type f) ../fap-artifacts/
         
     - name: Upload .fap artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: pirateproto2-fap
         path: fap-artifacts/

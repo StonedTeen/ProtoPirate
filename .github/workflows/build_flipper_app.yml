@@ -1,0 +1,114 @@
+name: Build PirateProto 2 Flipper App
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Checkout Flipper Zero firmware
+      uses: actions/checkout@v4
+      with:
+        repository: flipperdevices/flipperzero-firmware
+        path: flipperzero-firmware
+        
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Install Flipper build dependencies
+      run: |
+        cd flipperzero-firmware
+        sudo apt-get update
+        sudo apt-get install -y \
+          python3-pip \
+          python3-venv \
+          python3-dev \
+          build-essential \
+          libusb-1.0-0-dev \
+          libnewlib-arm-none-eabi \
+          gcc-arm-none-eabi \
+          binutils-arm-none-eabi \
+          gdb-multiarch \
+          scons \
+          protobuf-compiler \
+          python3-protobuf \
+          git
+        
+    - name: Install Python dependencies
+      run: |
+        cd flipperzero-firmware
+        python3 -m pip install --upgrade pip
+        python3 -m pip install -r requirements.txt
+        
+    - name: Copy PirateProto 2 app to firmware
+      run: |
+        mkdir -p flipperzero-firmware/applications_user/pirateproto2
+        cp -r pirateproto2/* flipperzero-firmware/applications_user/pirateproto2/
+        
+    - name: Build PirateProto 2 app
+      run: |
+        cd flipperzero-firmware
+        ./fbt fap_pirateproto2
+        
+    - name: Find and upload .fap artifact
+      run: |
+        cd flipperzero-firmware
+        find . -name "pirateproto2.fap" -type f
+        mkdir -p ../fap-artifacts
+        cp $(find . -name "pirateproto2.fap" -type f) ../fap-artifacts/
+        
+    - name: Upload .fap artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: pirateproto2-fap
+        path: fap-artifacts/
+        retention-days: 30
+        
+    - name: Create release if tagged
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v1
+      with:
+        files: fap-artifacts/*
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Comment on PR with build result
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const artifact_url = `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`;
+          const comment = `
+          🎉 **PirateProto 2 Build Complete!**
+          
+          ✅ The Flipper app has been successfully built.
+          
+          📦 **Download the .fap file:** [Build Artifacts](${artifact_url})
+          
+          ## Installation Instructions:
+          1. Download the \`pirateproto2.fap\` file from the artifacts
+          2. Copy it to your Flipper Zero's SD card: \`/apps/Sub-GHz/\`
+          3. Reboot your Flipper Zero
+          4. Navigate to Sub-GHz apps and launch PirateProto 2
+          
+          ---
+          🤖 Built with GitHub Actions
+          `;
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: comment
+          });

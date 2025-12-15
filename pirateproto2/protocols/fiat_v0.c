@@ -3,6 +3,9 @@
 
 #define TAG "FiatProtocolV0"
 
+// Forward declarations
+struct SubGhzProtocolEncoderFiatV0;
+
 static const SubGhzBlockConst subghz_protocol_fiat_v0_const = {
     .te_short = 200,
     .te_long = 400,
@@ -27,17 +30,17 @@ struct SubGhzProtocolDecoderFiatV0 {
     uint32_t te_last;
 };
 
-struct SubGhzProtocolEncoderFiatV0 {
-    SubGhzProtocolEncoderBase base;
-    SubGhzProtocolBlockEncoder encoder;
-    SubGhzBlockGeneric generic;
-};
-
 typedef enum {
     FiatV0DecoderStepReset = 0,
     FiatV0DecoderStepPreamble = 1,
     FiatV0DecoderStepData = 2,
 } FiatV0DecoderStep;
+
+struct SubGhzProtocolEncoderFiatV0 {
+    SubGhzProtocolEncoderBase base;
+    SubGhzProtocolBlockEncoder encoder;
+    SubGhzBlockGeneric generic;
+};
 
 const SubGhzProtocolDecoder subghz_protocol_fiat_v0_decoder = {
     .alloc = subghz_protocol_decoder_fiat_v0_alloc,
